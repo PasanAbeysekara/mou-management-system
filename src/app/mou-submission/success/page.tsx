@@ -12,11 +12,19 @@ export default function SubmissionSuccess() {
         <p>3. Contact Information: For inquiries, please contact support@university.edu.</p>
       </div>
       <p className="mb-6">Please check your email for a confirmation of your submission.</p>
-      <Link 
-        href="mailto:"
-        className="inline-flex items-center bg-red-700 text-white px-6 py-3 rounded-md hover:bg-red-800"
+
+      <Link
+        href="/mou-submissions"
+        className="inline-flex items-center bg-red-700 text-white px-6 py-3 rounded-md hover:bg-red-800 mr-4"
       >
-        <span className="mr-2">✉</span> Check Email
+        Back to MOU Submissions
+      </Link>
+
+      <Link
+        href="/"
+        className="inline-flex items-center bg-gray-700 text-white px-6 py-3 rounded-md hover:bg-gray-800"
+      >
+        Go to Dashboard
       </Link>
     </div>
   );

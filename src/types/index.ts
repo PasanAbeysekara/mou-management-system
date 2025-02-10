@@ -1,5 +1,7 @@
 export type UserRole = 'USER' | 'LEGAL_ADMIN' | 'FACULTY_ADMIN' | 'SENATE_ADMIN' | 'UGC_ADMIN' | 'SUPER_ADMIN';
 
+export type DomainKey = 'legal' | 'faculty' | 'senate' | 'ugc';
+
 export interface User {
   id: string;
   name: string;
@@ -9,6 +11,10 @@ export interface User {
   avatar?: string;
 }
 
+export interface ApprovalObject {
+  approved: boolean;
+  date?: string | null;
+}
 export interface ApprovalStatus {
   approved: boolean;
   date?: Date;

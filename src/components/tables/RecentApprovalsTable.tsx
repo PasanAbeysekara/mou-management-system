@@ -10,17 +10,26 @@ export default function RecentApprovalsTable({ mous }: RecentApprovalsTableProps
       <table className="min-w-full bg-white rounded-lg shadow">
         <thead className="bg-gray-50">
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              Title
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              Status
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              Date
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
           {mous.map((mou) => (
             <tr key={mou.id}>
               <td className="px-6 py-4">{mou.title}</td>
+              {/* For demonstration, we assume these are "recently approved" */}
               <td className="px-6 py-4">Approved</td>
-              <td className="px-6 py-4">{new Date(mou.dateSubmitted).toLocaleDateString()}</td>
+              <td className="px-6 py-4">
+                {new Date(mou.dateSubmitted).toLocaleDateString()}
+              </td>
             </tr>
           ))}
         </tbody>

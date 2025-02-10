@@ -4,10 +4,8 @@ import PendingApprovalsTable from '@/components/tables/PendingApprovalsTable';
 import RecentApprovalsTable from '@/components/tables/RecentApprovalsTable';
 import UserSubmissionsTable from '@/components/tables/UserSubmissionsTable';
 import { useAuth } from '@/context/AuthContext';
-import { isAdmin } from '@/lib/utils';
-import { DashboardAnalytics, MOUSubmission, User } from '@/types/index';
+import { DashboardAnalytics, MOUSubmission, User, DomainKey } from '@/types';
 import { useState, useEffect } from 'react';
-
 
 interface AnalyticsCardProps {
   title: string;
@@ -26,6 +24,21 @@ interface UserDashboardContentProps {
   expiringMOUs: MOUSubmission[];
 }
 
+function getDomainFromRole(role: string): DomainKey | 'unknown' {
+  switch (role.toUpperCase()) {
+    case 'LEGAL_ADMIN':
+      return 'legal';
+    case 'FACULTY_ADMIN':
+      return 'faculty';
+    case 'SENATE_ADMIN':
+      return 'senate';
+    case 'UGC_ADMIN':
+      return 'ugc';
+    default:
+      return 'unknown'; // or throw an error
+  }
+}
+
 export default function Home() {
   const { user } = useAuth();
   const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(null);
@@ -40,12 +53,15 @@ export default function Home() {
 
   const fetchDashboardData = async () => {
     try {
-      const [analyticsData, mous] = await Promise.all([
+      const [analyticsData, recentData, expiringData] = await Promise.all([
         fetch('/api/analytics').then(res => res.json()),
-        fetch('/api/mous/recent').then(res => res.json())
+        fetch('/api/mous/recent').then(res => res.json()),
+        fetch('/api/mous/expiring').then(res => res.json()),
       ]);
+
       setAnalytics(analyticsData);
-      setRecentMOUs(mous);
+      setRecentMOUs(recentData);
+      setExpiringMOUs(expiringData);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     }
@@ -54,6 +70,9 @@ export default function Home() {
   if (!user) {
     return <div>Please log in to view the dashboard.</div>;
   }
+
+  // A simple role check: are we admin?
+  const isAdmin = ['LEGAL_ADMIN','FACULTY_ADMIN','SENATE_ADMIN','UGC_ADMIN','SUPER_ADMIN'].includes(user.role);
 
   return (
     <div className="p-6">
@@ -83,7 +102,7 @@ export default function Home() {
       </div>
 
       {/* Role-specific content */}
-      {isAdmin(user.role) ? (
+      {isAdmin ? (
         <AdminDashboardContent user={user} recentMOUs={recentMOUs} />
       ) : (
         <UserDashboardContent user={user} recentMOUs={recentMOUs} expiringMOUs={expiringMOUs} />
@@ -93,28 +112,39 @@ export default function Home() {
 }
 
 // Helper components
-const AnalyticsCard = ({ title, value, className = '' } : AnalyticsCardProps) => (
+const AnalyticsCard = ({ title, value, className = '' }: AnalyticsCardProps) => (
   <div className="bg-white p-6 rounded-lg shadow-md">
     <h2 className="text-lg font-semibold mb-2">{title}</h2>
     <p className={`text-3xl font-bold ${className}`}>{value}</p>
   </div>
 );
 
-const AdminDashboardContent = ({ user, recentMOUs } : AdminDashboardContentProps) => (
+const AdminDashboardContent = ({ user, recentMOUs }: AdminDashboardContentProps) => {
+  const domain = getDomainFromRole(user.role);
+
+  const domainApprovedMous = recentMOUs.filter((mou) => {
+    if (!mou.status || typeof mou.status !== 'object') return false;
+    if (domain === 'unknown') return false;
+    return mou.status[domain]?.approved === true;
+  });
+  
+  return (
   <div className="space-y-6">
     <section>
       <h2 className="text-xl font-semibold mb-4">Pending Approvals</h2>
+      {/* In practice, "pending" MOUs might need a different route or logic,
+          but let's assume recentMOUs includes them for demo. */}
       <PendingApprovalsTable mous={recentMOUs} userRole={user.role} />
     </section>
     
     <section>
       <h2 className="text-xl font-semibold mb-4">Recently Approved</h2>
-      <RecentApprovalsTable mous={recentMOUs} />
+      <RecentApprovalsTable mous={domainApprovedMous} />
     </section>
   </div>
-);
+)};
 
-const UserDashboardContent = ({ user, recentMOUs, expiringMOUs } : UserDashboardContentProps) => (
+const UserDashboardContent = ({ user, recentMOUs, expiringMOUs }: UserDashboardContentProps) => (
   <div className="space-y-6">
     <section>
       <h2 className="text-xl font-semibold mb-4">Your MOU Submissions</h2>

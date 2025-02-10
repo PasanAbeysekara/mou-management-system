@@ -14,7 +14,6 @@ export default function AdminManagementPage() {
 
   // We only allow SUPER_ADMIN to view this page
   useEffect(() => {
-    console.log("Checking session", session);
     if (session && session?.user?.role !== "SUPER_ADMIN") {
       router.push("/");
     }

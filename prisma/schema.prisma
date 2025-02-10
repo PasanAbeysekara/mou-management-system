@@ -7,6 +7,31 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model user {
+  id         String    @id @default(uuid())
+  email      String    @unique(map: "User_email_key")
+  password   String
+  name       String
+  role       user_role @default(USER)
+  department String?
+  avatar     String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  isActive   Boolean   @default(true)
+  addedBy    String?
+
+  mou_submissions mou_submissions[]
+}
+
+enum user_role {
+  USER
+  LEGAL_ADMIN
+  FACULTY_ADMIN
+  SENATE_ADMIN
+  UGC_ADMIN
+  SUPER_ADMIN
+}
+
 model mou_submissions {
   id                  String    @id
   title               String
@@ -21,27 +46,8 @@ model mou_submissions {
   documents           Json
   renewalOf           String?
   history             Json
-}
+  userId              String
 
-model user {
-  id         String    @id @default(uuid())
-  email      String    @unique(map: "User_email_key")
-  password   String
-  name       String
-  role       user_role @default(USER)
-  department String?
-  avatar     String?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  isActive   Boolean   @default(true)
-  addedBy    String?
-}
+  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-enum user_role {
-  USER
-  LEGAL_ADMIN
-  FACULTY_ADMIN
-  SENATE_ADMIN
-  UGC_ADMIN
-  SUPER_ADMIN
 }

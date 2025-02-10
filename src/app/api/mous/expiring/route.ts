@@ -13,25 +13,36 @@ export async function GET() {
     const userId = session.user.id;
     const role = session.user.role;
 
-    // If admin, fetch global, else fetch user’s own
-    let moUs;
+    // MOUs that expire in <= 30 days but still in the future
+    const soon = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+    let expiring;
     if (isAdminRole(role)) {
-      // e.g. get last 10 submissions
-      moUs = await prisma.mou_submissions.findMany({
-        orderBy: { dateSubmitted: 'desc' },
-        take: 10,
+      expiring = await prisma.mou_submissions.findMany({
+        where: {
+          validUntil: {
+            lte: soon,
+            gt: new Date(),
+          },
+        },
+        orderBy: { validUntil: 'asc' },
       });
     } else {
-      moUs = await prisma.mou_submissions.findMany({
-        where: { userId },
-        orderBy: { dateSubmitted: 'desc' },
-        take: 10,
+      expiring = await prisma.mou_submissions.findMany({
+        where: {
+          userId,
+          validUntil: {
+            lte: soon,
+            gt: new Date(),
+          },
+        },
+        orderBy: { validUntil: 'asc' },
       });
     }
 
-    return NextResponse.json(moUs);
+    return NextResponse.json(expiring);
   } catch (error) {
-    console.error('Error fetching recent MOUs:', error);
+    console.error('Error fetching expiring MOUs:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

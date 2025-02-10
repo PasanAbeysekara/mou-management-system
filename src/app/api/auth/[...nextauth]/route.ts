@@ -34,11 +34,8 @@ declare module 'next-auth/jwt' {
   }
 }
 export const authOptions: NextAuthOptions = {
-  // Must set a secret, either from .env or directly here:
   secret: process.env.NEXTAUTH_SECRET,
-  session: {
-    strategy: 'jwt', // Usually prefer JWT for credentials-based login
-  },
+  session: { strategy: 'jwt' },
   providers: [
     CredentialsProvider({
       name: 'Credentials',
@@ -48,55 +45,50 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error('Missing email or password')
+          throw new Error('Missing email or password');
         }
-
-        // Find user in the DB
+        
+        // 1) Look up user in DB
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
-        })
-        if (!user) {
-          throw new Error('User not found')
-        }
+        });
+        if (!user) throw new Error('User not found');
 
-        // Check password
-        const isValid = await bcrypt.compare(credentials.password, user.password)
-        if (!isValid) {
-          throw new Error('Invalid credentials')
-        }
+        // 2) Check password
+        const valid = await bcrypt.compare(credentials.password, user.password);
+        if (!valid) throw new Error('Invalid credentials');
 
-        // Return user object (will be encoded in JWT)
+        // 3) Return data that goes into the JWT
         return {
           id: user.id,
           email: user.email,
           role: user.role,
-          name: user.name,
-        }
+          name: user.name, // if you want
+        };
       },
     }),
   ],
   callbacks: {
-    // Insert `role` into JWT
     async jwt({ token, user }) {
+      // When user logs in for the first time, transfer user fields to token
       if (user) {
-        token.role = user.role
-        token.name = user.name
+        token.id = user.id;
+        token.role = user.role;
+        token.name = user.name;
       }
-      return token
+      return token;
     },
-    // Make role & name available in the session
     async session({ session, token }) {
+      // Transfer token fields to session user object
       if (session.user) {
-        session.user.role = token.role
-        session.user.name = token.name || ''
+        session.user.id = token.sub || '';
+        session.user.role = token.role;
+        session.user.name = token.name || '';
       }
-      return session
+      return session;
     },
   },
-}
+};
 
-// 2) Create the NextAuth handler
-const handler = NextAuth(authOptions)
-
-// 3) Export for GET & POST
-export { handler as GET, handler as POST }
+const handler = NextAuth(authOptions);
+export { handler as GET, handler as POST };
