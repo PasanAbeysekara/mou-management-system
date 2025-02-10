@@ -1,69 +1,47 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
-import { getServerSession } from 'next-auth/next';
-import { verify } from 'jsonwebtoken';
-import { cookies } from 'next/headers';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 export async function POST(request: Request) {
   try {
-    // Verify super admin authorization
-    const token = (await cookies()).get('auth-token')?.value;
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const session = await getServerSession(authOptions);
+
+    // Must be SUPER_ADMIN to create other admins
+    if (!session || session.user?.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const decoded = verify(token, process.env.JWT_SECRET!) as {
-      userId: string;
-      role: string;
-    };
+    const { email, role, name, department } = await request.json();
 
-    const superAdmin = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-    });
-
-    if (!superAdmin || superAdmin.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return NextResponse.json({ error: 'User with this email already exists' }, { status: 400 });
     }
 
-    // Create admin user
-    const { name, email, password, role, department } = await request.json();
+    // For new domain admins, store an empty password or random placeholder
+    const hashedEmptyPassword = await bcrypt.hash('', 10);
 
-    // Validate admin role
-    const validAdminRoles = ['LEGAL_ADMIN', 'FACULTY_ADMIN', 'SENATE_ADMIN', 'UGC_ADMIN'];
-    if (!validAdminRoles.includes(role)) {
-      return NextResponse.json(
-        { error: 'Invalid admin role' },
-        { status: 400 }
-      );
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 12);
-
-    const adminUser = await prisma.user.create({
+    const newAdmin = await prisma.user.create({
       data: {
-        name,
         email,
-        password: hashedPassword,
         role,
+        name,
         department,
-        addedBy: superAdmin.id,
+        password: hashedEmptyPassword,
       },
       select: {
         id: true,
-        name: true,
         email: true,
         role: true,
-        department: true,
       },
     });
 
-    return NextResponse.json({ user: adminUser });
+    return NextResponse.json({ user: newAdmin });
   } catch (error) {
-    console.error('Admin creation error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Register admin error:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

@@ -1,198 +1,116 @@
-'use client';
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Paper,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  TextField,
-  DialogActions,
-  MenuItem,
-} from '@mui/material';
+"use client";
 
-interface AdminFormData {
-  name: string;
-  email: string;
-  password: string;
-  role: string;
-  department: string;
-}
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
-export default function AdminManagement() {
-  const { user } = useAuth();
+/**
+ * Page for SUPER_ADMIN to manage or create domain admins.
+ */
+export default function AdminManagementPage() {
+  const { data: session } = useSession();
   const router = useRouter();
-  const [admins, setAdmins] = useState([]);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [formData, setFormData] = useState<AdminFormData>({
-    name: '',
-    email: '',
-    password: '',
-    role: '',
-    department: '',
-  });
 
+  // We only allow SUPER_ADMIN to view this page
   useEffect(() => {
-    if (user?.role !== 'SUPER_ADMIN') {
-      router.push('/');
-    } else {
-      fetchAdmins();
+    console.log("Checking session", session);
+    if (session && session?.user?.role !== "SUPER_ADMIN") {
+      router.push("/");
     }
-  }, [user]);
+  }, [session, router]);
 
-  const fetchAdmins = async () => {
-    const response = await fetch('/api/admin/list');
-    const data = await response.json();
-    setAdmins(data.admins);
-  };
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState("LEGAL_ADMIN"); // default pick
+  const [name, setName] = useState("");
+  const [department, setDepartment] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch('/api/admin/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+      const res = await fetch("/api/auth/register-admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, role, name, department }),
       });
-
-      if (response.ok) {
-        setOpenDialog(false);
-        fetchAdmins();
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to create admin");
       }
-    } catch (error) {
-      console.error('Error creating admin:', error);
-    }
-  };
-
-  const adminRoles = [
-    'LEGAL_ADMIN',
-    'FACULTY_ADMIN',
-    'SENATE_ADMIN',
-    'UGC_ADMIN',
-  ];
-
-  // Add this function inside the AdminManagement component
-  const handleDeactivateAdmin = async (adminId: string) => {
-    try {
-      const response = await fetch(`/api/admin/deactivate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminId }),
-      });
-
-      if (response.ok) {
-        fetchAdmins(); // Refresh the list
+      toast.success(
+        `Admin ${data.user.email} created with role ${data.user.role}`
+      );
+      // Clear fields
+      setEmail("");
+      setRole("LEGAL_ADMIN");
+      setName("");
+      setDepartment("");
+    } catch (err) {
+      if (err instanceof Error) {
+        toast.error(err.message);
+      } else {
+        toast.error("Unknown error");
       }
-    } catch (error) {
-      console.error('Error deactivating admin:', error);
     }
   };
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between mb-6">
-        <h1 className="text-2xl font-bold">Admin Management</h1>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => setOpenDialog(true)}
-        >
-          Add New Admin
-        </Button>
-      </div>
-
-      <Paper className="overflow-hidden">
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Role</TableCell>
-              <TableCell>Department</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {admins.map((admin: any) => (
-              <TableRow key={admin.id}>
-                <TableCell>{admin.name}</TableCell>
-                <TableCell>{admin.email}</TableCell>
-                <TableCell>{admin.role}</TableCell>
-                <TableCell>{admin.department}</TableCell>
-                <TableCell>
-                  <Button
-                    size="small"
-                    color="secondary"
-                    onClick={() => handleDeactivateAdmin(admin.id)}
-                  >
-                    Deactivate
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Paper>
-
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-        <DialogTitle>Add New Admin</DialogTitle>
-        <DialogContent>
-          <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-            <TextField
-              fullWidth
-              label="Name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            />
-            <TextField
-              fullWidth
-              label="Email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            />
-            <TextField
-              fullWidth
-              label="Password"
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            />
-            <TextField
-              fullWidth
-              select
-              label="Role"
-              value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-            >
-              {adminRoles.map((role) => (
-                <MenuItem key={role} value={role}>
-                  {role.replace('_', ' ')}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              fullWidth
-              label="Department"
-              value={formData.department}
-              onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-            />
-          </form>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
-          <Button onClick={handleSubmit} variant="contained" color="primary">
-            Add Admin
-          </Button>
-        </DialogActions>
-      </Dialog>
+    <div className="max-w-lg mx-auto m-10">
+      <h1 className="text-2xl font-bold mb-4">
+        Admin Management (SUPER_ADMIN only)
+      </h1>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label>Email</label>
+          <input
+            className="w-full border rounded p-2"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </div>
+        <div>
+          <label>Role</label>
+          <select
+            className="w-full border rounded p-2"
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+          >
+            <option value="LEGAL_ADMIN">LEGAL_ADMIN</option>
+            <option value="FACULTY_ADMIN">FACULTY_ADMIN</option>
+            <option value="SENATE_ADMIN">SENATE_ADMIN</option>
+            <option value="UGC_ADMIN">UGC_ADMIN</option>
+            {/* Add more domain-based roles as needed */}
+          </select>
+        </div>
+        <div>
+          <label>Name (optional)</label>
+          <input
+            className="w-full border rounded p-2"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+        <div>
+          <label>Department (optional)</label>
+          <input
+            className="w-full border rounded p-2"
+            type="text"
+            value={department}
+            onChange={(e) => setDepartment(e.target.value)}
+          />
+        </div>
+        <div className="flex justify-center">
+          <button
+            type="submit"
+            className=" bg-red-700 text-white p-3 rounded-md hover:bg-red-800"
+          >
+            Create Admin
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

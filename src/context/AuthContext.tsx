@@ -1,16 +1,28 @@
 'use client';
-import React, { createContext, useContext, useEffect, useState } from 'react';
+
+import React, { createContext, useContext, useEffect } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { UserRole } from '@/types'; // Adjust to your actual type definitions
 
 interface AuthContextType {
-  user: any; // Or define your own type if you have a typed "user" object
+  user: any; // Or a specific type for { id, email, name, role, etc. }
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  /**
+   * Checks if the user is in any "admin-like" role
+   * (e.g. LEGAL_ADMIN, FACULTY_ADMIN, SENATE_ADMIN, UGC_ADMIN, SUPER_ADMIN).
+   */
   isAdmin: () => boolean;
+  /**
+   * Checks if user is a "SUPER_ADMIN"
+   */
+  isSuperAdmin: () => boolean;
+  /**
+   * Checks if user has one of the specified roles.
+   */
   hasRole: (roles: UserRole[]) => boolean;
 }
 
@@ -21,21 +33,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  // 2) "session?.user" is typically where NextAuth attaches user data
-  //    (email, role, name, etc.), based on your callbacks in `[...nextauth].ts`.
+  // 2) NextAuth attaches user data (email, role, name, etc.) at session.user
   const user = session?.user;
 
   // 3) NextAuth indicates loading with status === 'loading'
   const loading = status === 'loading';
 
-  // 4) Optionally, redirect unauthenticated users to login
-  //    once we know we are not "loading" anymore.
+  // 4) Optionally, redirect unauthenticated users to login once we know we are not "loading."
   useEffect(() => {
     if (!loading && !user) {
-      // If you want to restrict the entire app to logged-in users:
+      // If you want to force the entire app behind login:
       // router.push('/login');
       //
-      // Otherwise, you can remove this if you handle protected routes differently.
+      // Otherwise, remove this if you handle protections on a per-route basis.
     }
   }, [loading, user, router]);
 
@@ -67,8 +77,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   const logout = async () => {
     try {
-      // signOut can automatically redirect via callbackUrl if desired.
-      // e.g., signOut({ callbackUrl: '/login' });
+      // signOut can automatically redirect via callbackUrl if you like:
+      // await signOut({ callbackUrl: '/login' });
       await signOut({ redirect: false });
       router.push('/login');
     } catch (error) {
@@ -78,7 +88,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   /**
-   * Check if user is in an admin-like role. Adjust roles as needed.
+   * Check if user is in a domain or super admin role.
+   * Adjust roles array to suit your domain-based admins.
    */
   const isAdmin = () => {
     if (!user?.role) return false;
@@ -92,6 +103,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   /**
+   * Check if user is specifically SUPER_ADMIN
+   */
+  const isSuperAdmin = () => {
+    return user?.role === 'SUPER_ADMIN';
+  };
+
+  /**
    * Check if user has one of the specified roles.
    */
   const hasRole = (roles: UserRole[]) => {
@@ -101,7 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, login, logout, isAdmin, hasRole }}
+      value={{ user, loading, login, logout, isAdmin, isSuperAdmin, hasRole }}
     >
       {children}
     </AuthContext.Provider>
@@ -109,7 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * A simple hook to use the AuthContext.
+ * Simple hook to consume the AuthContext.
  */
 export const useAuth = () => {
   const context = useContext(AuthContext);
