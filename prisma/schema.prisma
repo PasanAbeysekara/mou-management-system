@@ -1,0 +1,47 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model mou_submissions {
+  id                  String    @id
+  title               String
+  partnerOrganization String
+  purpose             String
+  description         String
+  dateSubmitted       DateTime  @default(now())
+  datesSigned         DateTime?
+  validUntil          DateTime
+  submittedBy         String
+  status              Json
+  documents           Json
+  renewalOf           String?
+  history             Json
+}
+
+model user {
+  id         String    @id @default(uuid())
+  email      String    @unique(map: "User_email_key")
+  password   String
+  name       String
+  role       user_role @default(USER)
+  department String?
+  avatar     String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  isActive   Boolean   @default(true)
+  addedBy    String?
+}
+
+enum user_role {
+  USER
+  LEGAL_ADMIN
+  FACULTY_ADMIN
+  SENATE_ADMIN
+  UGC_ADMIN
+  SUPER_ADMIN
+}
