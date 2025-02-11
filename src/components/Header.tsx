@@ -1,14 +1,22 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import PersonIcon from "@mui/icons-material/Person";
 import SettingsIcon from "@mui/icons-material/Settings";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import LogoutIcon from "@mui/icons-material/Logout";
+
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  createdAt: string;
+  mouId?: string;
+}
 
 export default function Header() {
   const pathname = usePathname();
@@ -16,12 +24,39 @@ export default function Header() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
 
+  // State for real notifications
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  const router = useRouter();
+
   const isActive = (path: string) => {
     if (path === "/") {
       return pathname === path;
     }
     return pathname.startsWith(path);
   };
+
+  // Fetch notifications on mount if user is logged in
+  useEffect(() => {
+    if (!user) return;
+    fetchNotifications();
+  }, [user]);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await fetch("/api/notifications");
+      if (!res.ok) {
+        throw new Error("Failed to fetch notifications");
+      }
+      const data: Notification[] = await res.json();
+      setNotifications(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  // Use total number of notifications (or filter for unread if desired)
+  const notificationCount = notifications.length;
 
   return (
     <header className="bg-white shadow-md">
@@ -87,9 +122,11 @@ export default function Header() {
                     className="text-gray-600 hover:text-red-700 relative"
                   >
                     <NotificationsIcon className="h-6 w-6" />
-                    <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-600 rounded-full text-xs text-white flex items-center justify-center">
-                      2
-                    </span>
+                    {notificationCount > 0 && (
+                      <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-600 rounded-full text-xs text-white flex items-center justify-center">
+                        {notificationCount}
+                      </span>
+                    )}
                   </button>
 
                   {/* Notifications Dropdown */}
@@ -99,16 +136,15 @@ export default function Header() {
                         <h3 className="text-sm font-semibold">Notifications</h3>
                       </div>
                       <div className="max-h-96 overflow-y-auto">
-                        <NotificationItem
-                          title="MOU Expiring Soon"
-                          message="Your MOU with ABC Corp is expiring in 30 days"
-                          time="2 hours ago"
-                        />
-                        <NotificationItem
-                          title="MOU Approved"
-                          message="Your MOU submission has been approved by Legal"
-                          time="1 day ago"
-                        />
+                        {notifications.length === 0 ? (
+                          <div className="px-4 py-3 text-sm text-gray-600">
+                            No notifications
+                          </div>
+                        ) : (
+                          notifications.map((notif) => (
+                            <NotificationItem key={notif.id} {...notif} />
+                          ))
+                        )}
                       </div>
                       <div className="px-4 py-2 border-t text-center">
                         <Link
@@ -130,7 +166,6 @@ export default function Header() {
                   >
                     <div className="h-8 w-8 rounded-full bg-gray-200 overflow-hidden">
                       <Image
-                        // src={user.avatar || "/avatar-placeholder.png"}
                         src={"/logo.png"}
                         alt="User avatar"
                         width={32}
@@ -210,19 +245,35 @@ export default function Header() {
 }
 
 function NotificationItem({
+  id,
   title,
   message,
-  time,
+  createdAt,
+  mouId,
 }: {
+  id: string;
   title: string;
   message: string;
-  time: string;
+  createdAt: string;
+  mouId?: string;
 }) {
+  const router = useRouter();
   return (
     <div className="px-4 py-3 hover:bg-gray-50 border-b last:border-b-0">
       <div className="text-sm font-semibold text-gray-900">{title}</div>
       <p className="text-sm text-gray-600">{message}</p>
-      <p className="text-xs text-gray-500 mt-1">{time}</p>
+      <p className="text-xs text-gray-500 mt-1">
+        {new Date(createdAt).toLocaleString()}
+      </p>
+      {/* If the notification is related to an expiring MOU, show Renew button */}
+      {mouId && (
+        <button
+          onClick={() => router.push(`/mou-submissions/form?renewId=${mouId}`)}
+          className="mt-2 text-sm text-blue-600 hover:underline"
+        >
+          Renew this MOU
+        </button>
+      )}
     </div>
   );
 }

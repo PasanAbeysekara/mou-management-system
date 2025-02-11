@@ -1,15 +1,10 @@
+// app/api/mou-submissions/route.ts
+
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
-/**
- * POST /api/mou-submissions
- * Creates a new MOU submission with all mandatory fields.
- *
- * GET /api/mou-submissions
- * Returns MOU submissions (user-specific or admin scope).
- */
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,7 +13,7 @@ export async function POST(request: Request) {
     }
 
     const userId = session.user.id;
-    // You might store user name or email in "submittedBy"
+    // Use user's email or name as the submittedBy value
     const submittedBy = session.user.email || session.user.name || 'Unknown';
 
     // Parse the request body
@@ -29,30 +24,37 @@ export async function POST(request: Request) {
       description,
       datesSigned,  // optional
       validUntil,
-      renewalOf,    // optional
-      status,       // JSON
-      documents,    // JSON
-      history       // JSON
+      renewalOf,    // optional – if provided, indicates a renewal submission
+      status,       // JSON object (if provided)
+      documents,    // JSON (if provided)
+      history       // JSON array (if provided)
     } = await request.json();
 
-    // Validate required fields
-    if (
-      !title ||
-      !partnerOrganization ||
-      !purpose ||
-      !description ||
-      !validUntil ||
-      !status ||
-      !documents ||
-      !history
-    ) {
+    // Validate required text fields and validUntil
+    if (!title || !partnerOrganization || !purpose || !description || !validUntil) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    // Convert date fields
+    // Use default values for JSON fields if not provided
+    const finalStatus = status || {
+      legal: { approved: false, date: null },
+      faculty: { approved: false, date: null },
+      senate: { approved: false, date: null },
+      ugc: { approved: false, date: null },
+    };
+
+    const finalDocuments = documents || {};
+    const finalHistory = history || [
+      {
+        action: 'Created',
+        date: new Date().toISOString(),
+      },
+    ];
+
+    // Convert and validate date fields
     const validUntilDate = new Date(validUntil);
     if (isNaN(validUntilDate.getTime())) {
       return NextResponse.json(
@@ -61,7 +63,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // datesSigned is optional
     let datesSignedDate: Date | null = null;
     if (datesSigned) {
       const parsed = new Date(datesSigned);
@@ -74,26 +75,49 @@ export async function POST(request: Request) {
       datesSignedDate = parsed;
     }
 
-    // Insert into DB
+    // If renewalOf is provided, check that the parent MOU exists.
+    if (renewalOf) {
+      const parentMOU = await prisma.mou_submissions.findUnique({
+        where: { id: renewalOf },
+      });
+      if (!parentMOU) {
+        return NextResponse.json({ error: 'Parent MOU not found' }, { status: 404 });
+      }
+      
+      // Optionally, update parent's history.
+      // Here, we assume parent's history is stored as JSON (an array).
+      const parentHistory = Array.isArray(parentMOU.history) ? parentMOU.history : [];
+      parentHistory.push({
+        action: "Renewed",
+        date: new Date().toISOString(),
+        renewedBy: submittedBy,
+      });
+      await prisma.mou_submissions.update({
+        where: { id: renewalOf },
+        data: { history: parentHistory },
+      });
+    }
+
+    // Insert the new MOU submission record
     const newMOU = await prisma.mou_submissions.create({
       data: {
-        // Mandatory fields
-        id: crypto.randomUUID(), // or let DB handle if you declared @default(uuid())
+        // Let Prisma generate the id if you use a default; here we use crypto.randomUUID()
+        id: crypto.randomUUID(),
         title,
         partnerOrganization,
         purpose,
         description,
         validUntil: validUntilDate,
         submittedBy,
-        status,         // JSON
-        documents,      // JSON
-        history,        // JSON
+        status: finalStatus,       // JSON
+        documents: finalDocuments, // JSON
+        history: finalHistory,     // JSON array
 
         // Optional fields
         datesSigned: datesSignedDate,
         renewalOf: renewalOf || null,
 
-        // Relations
+        // Relation
         userId
       },
     });
@@ -118,8 +142,7 @@ export async function GET() {
     const userId = session.user.id;
     const userRole = session.user.role;
 
-    // If user is admin, they might see all submissions or only relevant ones
-    // Otherwise, only their own
+    // If user is admin, they might see all submissions; otherwise, only their own
     let mouList;
     if (isAdminRole(userRole)) {
       mouList = await prisma.mou_submissions.findMany({

@@ -5,6 +5,11 @@ interface ExpiringMOUsTableProps {
 }
 
 export default function ExpiringMOUsTable({ mous }: ExpiringMOUsTableProps) {
+  const handleRenew = (mouId: string) => {
+    // Send user to the MOU form with a "renewId" query param
+    window.location.href = `/mou-submission/form?renewId=${mouId}`;
+  };
+
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full bg-white rounded-lg shadow">
@@ -31,9 +36,7 @@ export default function ExpiringMOUsTable({ mous }: ExpiringMOUsTableProps) {
               <td className="px-6 py-4">
                 <button
                   className="text-red-600 hover:text-red-800"
-                  onClick={() =>
-                    (window.location.href = `/mou-submissions/renew/${mou.id}`)
-                  }
+                  onClick={() => handleRenew(mou.id)}
                 >
                   Renew
                 </button>

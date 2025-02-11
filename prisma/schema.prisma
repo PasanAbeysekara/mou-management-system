@@ -21,6 +21,7 @@ model user {
   addedBy    String?
 
   mou_submissions mou_submissions[]
+  notifications   Notification[]
 }
 
 enum user_role {
@@ -50,4 +51,19 @@ model mou_submissions {
 
   user user @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // Self-referential relation for tracking renewals
+  parentMOU   mou_submissions?  @relation("Renewal", fields: [renewalOf], references: [id])
+  renewedMOUs mou_submissions[] @relation("Renewal")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  mouId     String?   // <-- New: related MOU ID, if applicable
+  createdAt DateTime @default(now())
+  read      Boolean  @default(false)
+
+  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

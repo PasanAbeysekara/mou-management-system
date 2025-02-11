@@ -1,11 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 
 export default function MOUSubmissionForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const renewId = searchParams.get('renewId'); // e.g. "abc123"
+
   const [formData, setFormData] = useState({
     title: '',
     partnerOrganization: '',
@@ -17,6 +20,37 @@ export default function MOUSubmissionForm() {
   });
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    const fetchMOU = async () => {
+      if (!renewId) return;
+      try {
+        const res = await fetch(`/api/mou-submissions/${renewId}`);
+        if (!res.ok) {
+          throw new Error('Failed to fetch MOU for renewal');
+        }
+        const existingMou = await res.json();
+        // Pre-fill form
+        setFormData({
+          title: existingMou.title,
+          partnerOrganization: existingMou.partnerOrganization,
+          purpose: existingMou.purpose,
+          description: existingMou.description,
+          datesSigned: existingMou.datesSigned
+            ? existingMou.datesSigned.slice(0, 10)
+            : '',
+          validUntil: existingMou.validUntil
+            ? existingMou.validUntil.slice(0, 10)
+            : '',
+          renewalOf: renewId || '',
+        });
+      } catch (err) {
+        console.error(err);
+        toast.error('Error fetching MOU details');
+      }
+    };
+    fetchMOU();
+  }, [renewId]);
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -25,32 +59,35 @@ export default function MOUSubmissionForm() {
       // Construct the body to match your mou_submissions schema
       // status, documents, and history are required JSON fields in your schema
       // We'll include default or empty values here
-      const payload = {
-        ...formData,
-        // If datesSigned is empty, we can pass null instead
-        datesSigned: formData.datesSigned || null,
-        renewalOf: formData.renewalOf || null,
+      // const payload = {
+      //   ...formData,
+      //   // If datesSigned is empty, we can pass null instead
+      //   datesSigned: formData.datesSigned || null,
+      //   renewalOf: formData.renewalOf || null,
 
-        // Provide default JSON if user doesn't fill them in the UI
-        status: {
-          legal: { approved: false, date: null },
-          faculty: { approved: false, date: null },
-          senate: { approved: false, date: null },
-          ugc: { approved: false, date: null },
-        },
-        documents: [], // or an array of file objects if you handle uploads
-        history: [
-          {
-            action: 'Created',
-            date: new Date().toISOString(),
-          },
-        ],
-      };
+      //   // Provide default JSON if user doesn't fill them in the UI
+      //   status: {
+      //     legal: { approved: false, date: null },
+      //     faculty: { approved: false, date: null },
+      //     senate: { approved: false, date: null },
+      //     ugc: { approved: false, date: null },
+      //   },
+      //   documents: [], // or an array of file objects if you handle uploads
+      //   history: [
+      //     {
+      //       action: 'Created',
+      //       date: new Date().toISOString(),
+      //     },
+      //   ],
+      // };
 
       const response = await fetch('/api/mou-submissions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          ...formData,
+          renewalOf: renewId || null,
+        }),
       });
 
       if (!response.ok) {
@@ -74,7 +111,7 @@ export default function MOUSubmissionForm() {
 
   return (
     <div className="max-w-2xl mx-auto py-8 px-4">
-      <h1 className="text-2xl font-bold text-center mb-8">MOU Submission Form</h1>
+      <h1 className="text-2xl font-bold text-center mb-8">{renewId ? 'Renew' : 'Create'} MOU Submission Form</h1>
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* TITLE (Required) */}
         <div>
