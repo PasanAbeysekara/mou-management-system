@@ -88,7 +88,10 @@ export default function Header() {
                 { name: "Dashboard", path: "/" },
                 { name: "MOU Submission", path: "/mou-submission" },
                 ...(user.role !== "USER"
-                  ? [{ name: "Admin Panel", path: "/admin-panel" }]
+                  ? [
+                      { name: "Admin Panel", path: "/admin-panel" },
+                      { name: "Reporting", path: "/reporting" },
+                    ]
                   : []),
               ].map((item) => (
                 <Link
