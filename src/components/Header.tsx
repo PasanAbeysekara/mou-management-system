@@ -271,7 +271,7 @@ function NotificationItem({
       {/* If the notification is related to an expiring MOU, show Renew button */}
       {mouId && (
         <button
-          onClick={() => router.push(`/mou-submissions/form?renewId=${mouId}`)}
+          onClick={() => router.push(`/mou-submission/form?renewId=${mouId}`)}
           className="mt-2 text-sm text-blue-600 hover:underline"
         >
           Renew this MOU

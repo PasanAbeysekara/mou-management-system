@@ -29,7 +29,7 @@ export default function NotificationSystem() {
         >
           <h3 className="font-semibold">MOU Expiring Soon</h3>
           <p className="text-sm text-gray-600">{mou.title}</p>
-          <p className="text-sm text-gray-500">Expires: {mou.validUntil}</p>
+          <p className="text-sm text-gray-500">Expires: {new Date(mou.validUntil).toLocaleDateString()}</p>
           <button
             onClick={() => window.location.href = `/mou-submission/renew/${mou.id}`}
             className="mt-2 text-sm text-blue-600 hover:underline"
