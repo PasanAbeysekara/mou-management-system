@@ -48,15 +48,16 @@ model mou_submissions {
   renewalOf           String?
   history             Json
   userId              String
-  organizationId      String
+  organizationId      String?   // now optional
 
-  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           user           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Organization   Organization?  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   
-  // Self-referential relation for tracking renewals
+  // self-relation for renewals
   parentMOU   mou_submissions?  @relation("Renewal", fields: [renewalOf], references: [id])
   renewedMOUs mou_submissions[] @relation("Renewal")
 }
+
 
 model Organization {
   id        String   @id @default(uuid())

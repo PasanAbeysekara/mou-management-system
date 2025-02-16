@@ -27,7 +27,7 @@ export default function PendingApprovalsTable({ mous, userRole }: PendingApprova
         case 'UGC_ADMIN':
           return mou.status.senate?.approved && !mou.status.ugc?.approved;
         default:
-          return false;
+          return true;
       }
     });
   };

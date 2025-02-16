@@ -1,5 +1,3 @@
-// app/api/mou-submissions/route.ts
-
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getServerSession } from 'next-auth';
@@ -13,7 +11,6 @@ export async function POST(request: Request) {
     }
 
     const userId = session.user.id;
-    // Use user's email or name as the submittedBy value
     const submittedBy = session.user.email || session.user.name || 'Unknown';
 
     // Parse the request body
@@ -22,37 +19,31 @@ export async function POST(request: Request) {
       partnerOrganization,
       purpose,
       description,
-      datesSigned,  // optional
+      datesSigned,   // optional
       validUntil,
-      renewalOf,    // optional – if provided, indicates a renewal submission
-      status,       // JSON object (if provided)
-      documents,    // JSON (if provided)
-      history       // JSON array (if provided)
+      renewalOf,     // optional – parent MOU id for renewal
+      organizationId, // optional: if provided, the selected organization's id
+      status,        // JSON object (e.g. { legal: { approved: false, date: null }, ... })
+      documents,     // JSON (e.g. { justification: "url" })
+      history        // JSON array (e.g. [ { action: "Created", date: "..." } ])
     } = await request.json();
 
-    // Validate required text fields and validUntil
-    if (!title || !partnerOrganization || !purpose || !description || !validUntil) {
+    // Validate required fields (do not include organizationId or renewalOf in required check)
+    if (
+      !title ||
+      !partnerOrganization ||
+      !purpose ||
+      !description ||
+      !validUntil ||
+      !status ||
+      !documents ||
+      !history
+    ) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       );
     }
-
-    // Use default values for JSON fields if not provided
-    const finalStatus = status || {
-      legal: { approved: false, date: null },
-      faculty: { approved: false, date: null },
-      senate: { approved: false, date: null },
-      ugc: { approved: false, date: null },
-    };
-
-    const finalDocuments = documents || {};
-    const finalHistory = history || [
-      {
-        action: 'Created',
-        date: new Date().toISOString(),
-      },
-    ];
 
     // Convert and validate date fields
     const validUntilDate = new Date(validUntil);
@@ -75,7 +66,8 @@ export async function POST(request: Request) {
       datesSignedDate = parsed;
     }
 
-    // If renewalOf is provided, check that the parent MOU exists.
+    // If renewalOf is provided, verify that the parent MOU exists and update its history.
+    let parentConnect = undefined;
     if (renewalOf) {
       const parentMOU = await prisma.mou_submissions.findUnique({
         where: { id: renewalOf },
@@ -84,9 +76,8 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Parent MOU not found' }, { status: 404 });
       }
       
-      // Optionally, update parent's history.
-      // Here, we assume parent's history is stored as JSON (an array).
-      const parentHistory = Array.isArray(parentMOU.history) ? parentMOU.history : [];
+      // Update parent's history (optional)
+      const parentHistory: any[] = Array.isArray(parentMOU.history) ? parentMOU.history : [];
       parentHistory.push({
         action: "Renewed",
         date: new Date().toISOString(),
@@ -96,12 +87,12 @@ export async function POST(request: Request) {
         where: { id: renewalOf },
         data: { history: parentHistory },
       });
+      parentConnect = { connect: { id: renewalOf } };
     }
 
-    // Insert the new MOU submission record
+    // Create the new MOU submission record using nested relations.
     const newMOU = await prisma.mou_submissions.create({
       data: {
-        // Let Prisma generate the id if you use a default; here we use crypto.randomUUID()
         id: crypto.randomUUID(),
         title,
         partnerOrganization,
@@ -109,16 +100,15 @@ export async function POST(request: Request) {
         description,
         validUntil: validUntilDate,
         submittedBy,
-        status: finalStatus,       // JSON
-        documents: finalDocuments, // JSON
-        history: finalHistory,     // JSON array
-
-        // Optional fields
+        status,         // JSON
+        documents,      // JSON
+        history,        // JSON array provided in request
         datesSigned: datesSignedDate,
-        renewalOf: renewalOf || null,
-
-        // Relation
-        userId
+        // Do NOT include `renewalOf` as a top-level field here.
+        parentMOU: parentConnect,
+        // If organizationId is provided, connect it; otherwise, leave it undefined.
+        Organization: organizationId ? { connect: { id: organizationId } } : undefined,
+        user: { connect: { id: userId } },
       },
     });
 
@@ -142,7 +132,6 @@ export async function GET() {
     const userId = session.user.id;
     const userRole = session.user.role;
 
-    // If user is admin, they might see all submissions; otherwise, only their own
     let mouList;
     if (isAdminRole(userRole)) {
       mouList = await prisma.mou_submissions.findMany({
@@ -167,7 +156,6 @@ export async function GET() {
 
 /**
  * Helper to check if user role is an admin or super admin.
- * Adjust roles as needed for your domain logic.
  */
 function isAdminRole(role: string) {
   return [

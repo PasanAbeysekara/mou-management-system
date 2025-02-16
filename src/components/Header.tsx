@@ -8,6 +8,7 @@ import NotificationsIcon from "@mui/icons-material/Notifications";
 import PersonIcon from "@mui/icons-material/Person";
 import SettingsIcon from "@mui/icons-material/Settings";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
+import CorporateFareIcon from '@mui/icons-material/CorporateFare';
 import LogoutIcon from "@mui/icons-material/Logout";
 
 interface Notification {
@@ -199,6 +200,17 @@ export default function Header() {
                           <div className="flex items-center space-x-2">
                             <AdminPanelSettingsIcon className="h-4 w-4" />
                             <span>Admin Management</span>
+                          </div>
+                        </Link>
+                      )}
+                      {user.role === "SUPER_ADMIN" && (
+                        <Link
+                          href="/admin/organizations"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <CorporateFareIcon className="h-4 w-4" />
+                            <span>Add Organizations</span>
                           </div>
                         </Link>
                       )}

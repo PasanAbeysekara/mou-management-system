@@ -1,4 +1,5 @@
 'use client';
+
 import ExpiringMOUsTable from '@/components/tables/ExpiringMOUsTable';
 import PendingApprovalsTable from '@/components/tables/PendingApprovalsTable';
 import RecentApprovalsTable from '@/components/tables/RecentApprovalsTable';
@@ -6,6 +7,8 @@ import UserSubmissionsTable from '@/components/tables/UserSubmissionsTable';
 import { useAuth } from '@/context/AuthContext';
 import { DashboardAnalytics, MOUSubmission, User, DomainKey } from '@/types';
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
 interface AnalyticsCardProps {
   title: string;
@@ -15,7 +18,8 @@ interface AnalyticsCardProps {
 
 interface AdminDashboardContentProps {
   user: User;
-  recentMOUs: MOUSubmission[];
+  pendingApprovals: MOUSubmission[];
+  domainApprovedMous: MOUSubmission[];
 }
 
 interface UserDashboardContentProps {
@@ -35,23 +39,28 @@ function getDomainFromRole(role: string): DomainKey | 'unknown' {
     case 'UGC_ADMIN':
       return 'ugc';
     default:
-      return 'unknown'; // or throw an error
+      return 'unknown';
   }
 }
 
 export default function Home() {
   const { user } = useAuth();
+  const router = useRouter();
   const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(null);
   const [recentMOUs, setRecentMOUs] = useState<MOUSubmission[]>([]);
   const [expiringMOUs, setExpiringMOUs] = useState<MOUSubmission[]>([]);
+  const [pendingApprovals, setPendingApprovals] = useState<MOUSubmission[]>([]);
 
   useEffect(() => {
     if (user) {
       fetchDashboardData();
+      if (isAdmin(user.role)) {
+        fetchPendingApprovals();
+      }
     }
   }, [user]);
 
-  const fetchDashboardData = async () => {
+  async function fetchDashboardData() {
     try {
       const [analyticsData, recentData, expiringData] = await Promise.all([
         fetch('/api/analytics').then(res => res.json()),
@@ -64,15 +73,36 @@ export default function Home() {
       setExpiringMOUs(expiringData);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      toast.error('Error fetching dashboard data');
     }
-  };
+  }
 
+  async function fetchPendingApprovals() {
+    try {
+      const res = await fetch('/api/mous/pending');
+      if (!res.ok) throw new Error("Failed to fetch pending approvals");
+      const data = await res.json();
+      setPendingApprovals(data);
+    } catch (error) {
+      console.error('Error fetching pending approvals:', error);
+      toast.error("Error fetching pending approvals");
+    }
+  }
+
+  const isAdmin = (role: string) =>
+    ['LEGAL_ADMIN','FACULTY_ADMIN','SENATE_ADMIN','UGC_ADMIN','SUPER_ADMIN'].includes(role);
+
+  // For Recently Approved, filter recentMOUs based on the domain approval.
+  // const domain = user ? getDomainFromRole(user.role) : 'unknown';
+  const domainApprovedMous = recentMOUs.filter((mou) => {
+    if (!mou.status || typeof mou.status !== 'object') return false;
+    return Object.values(mou.status).every((step) => step.approved === true);
+  });
+
+  console.log('domainApprovedMous:', domainApprovedMous);
   if (!user) {
     return <div>Please log in to view the dashboard.</div>;
   }
-
-  // A simple role check: are we admin?
-  const isAdmin = ['LEGAL_ADMIN','FACULTY_ADMIN','SENATE_ADMIN','UGC_ADMIN','SUPER_ADMIN'].includes(user.role);
 
   return (
     <div className="p-6">
@@ -80,32 +110,25 @@ export default function Home() {
       
       {/* Analytics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <AnalyticsCard
-          title="Total Submissions"
-          value={analytics?.totalSubmissions || 0}
-        />
-        <AnalyticsCard
-          title="Active MOUs"
-          value={analytics?.activeSubmissions || 0}
-          className="text-green-600"
-        />
-        <AnalyticsCard
-          title="Pending Approval"
-          value={analytics?.pendingSubmissions || 0}
-          className="text-yellow-600"
-        />
-        <AnalyticsCard
-          title="Expiring Soon"
-          value={analytics?.expiringMOUs || 0}
-          className="text-red-600"
-        />
+        <AnalyticsCard title="Total Submissions" value={analytics?.totalSubmissions || 0} />
+        <AnalyticsCard title="Active MOUs" value={analytics?.activeSubmissions || 0} className="text-green-600" />
+        <AnalyticsCard title="Pending Approval" value={analytics?.pendingSubmissions || 0} className="text-yellow-600" />
+        <AnalyticsCard title="Expiring Soon" value={analytics?.expiringMOUs || 0} className="text-red-600" />
       </div>
 
       {/* Role-specific content */}
-      {isAdmin ? (
-        <AdminDashboardContent user={user} recentMOUs={recentMOUs} />
+      {isAdmin(user.role) ? (
+        <AdminDashboardContent 
+          user={user} 
+          pendingApprovals={pendingApprovals} 
+          domainApprovedMous={domainApprovedMous} 
+        />
       ) : (
-        <UserDashboardContent user={user} recentMOUs={recentMOUs} expiringMOUs={expiringMOUs} />
+        <UserDashboardContent 
+          user={user} 
+          recentMOUs={recentMOUs} 
+          expiringMOUs={expiringMOUs} 
+        />
       )}
     </div>
   );
@@ -119,30 +142,20 @@ const AnalyticsCard = ({ title, value, className = '' }: AnalyticsCardProps) => 
   </div>
 );
 
-const AdminDashboardContent = ({ user, recentMOUs }: AdminDashboardContentProps) => {
-  const domain = getDomainFromRole(user.role);
-
-  const domainApprovedMous = recentMOUs.filter((mou) => {
-    if (!mou.status || typeof mou.status !== 'object') return false;
-    if (domain === 'unknown') return false;
-    return mou.status[domain]?.approved === true;
-  });
-  
-  return (
+const AdminDashboardContent = ({ user, pendingApprovals, domainApprovedMous }: AdminDashboardContentProps) => (
   <div className="space-y-6">
     <section>
       <h2 className="text-xl font-semibold mb-4">Pending Approvals</h2>
-      {/* In practice, "pending" MOUs might need a different route or logic,
-          but let's assume recentMOUs includes them for demo. */}
-      <PendingApprovalsTable mous={recentMOUs} userRole={user.role} />
+      <PendingApprovalsTable mous={pendingApprovals} userRole={user.role} />
     </section>
     
-    <section>
+    {user.role === 'SUPER_ADMIN' && (<section>
       <h2 className="text-xl font-semibold mb-4">Recently Approved</h2>
       <RecentApprovalsTable mous={domainApprovedMous} />
-    </section>
+    </section>)}
+    
   </div>
-)};
+);
 
 const UserDashboardContent = ({ user, recentMOUs, expiringMOUs }: UserDashboardContentProps) => (
   <div className="space-y-6">

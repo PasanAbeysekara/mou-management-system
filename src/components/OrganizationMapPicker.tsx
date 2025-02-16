@@ -16,7 +16,7 @@ const containerStyle = {
   height: '400px',
 };
 
-const center = { lat: 6.9271, lng: 79.8612 }; // Default center (Colombo, Sri Lanka)
+const center = { lat: 6.9271, lng: 79.8612 };
 
 export default function OrganizationMapPicker({ onLocationSelect }: OrganizationMapPickerProps) {
   const { isLoaded } = useJsApiLoader({
@@ -34,8 +34,6 @@ export default function OrganizationMapPicker({ onLocationSelect }: Organization
         lng: event.latLng.lng(),
       };
       setMarker(newPos);
-      // Reverse geocode the new position to get an address if needed.
-      // For simplicity, we'll just return lat/lng.
       onLocationSelect({ ...newPos, address: '' });
     }
   }, [onLocationSelect]);
