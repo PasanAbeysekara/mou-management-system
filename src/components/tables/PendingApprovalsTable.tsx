@@ -32,18 +32,6 @@ export default function PendingApprovalsTable({ mous, userRole }: PendingApprova
     });
   };
 
-  const handleApprove = async (mouId: string) => {
-    // Implement approval logic, e.g. call /api/mous/approve
-    // e.g.: await fetch(`/api/mous/${mouId}/approve`, { method: 'POST', body: JSON.stringify({ step: userRole }) });
-    // Then refresh the table or trigger re-fetch
-    console.log(`Approved MOU ID: ${mouId} by ${userRole}`);
-  };
-
-  const handleReject = async (mouId: string) => {
-    // Implement rejection logic
-    console.log(`Rejected MOU ID: ${mouId} by ${userRole}`);
-  };
-
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full bg-white rounded-lg shadow">

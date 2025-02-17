@@ -281,7 +281,7 @@ export default function MOUSubmissionForm() {
         </div>
         {/* Dates */}
         <div className="grid grid-cols-2 gap-4">
-          <div>
+          {/* <div>
             <label className="block mb-1 font-medium">
               Date Signed (optional)
             </label>
@@ -293,7 +293,7 @@ export default function MOUSubmissionForm() {
                 setFormData({ ...formData, datesSigned: e.target.value })
               }
             />
-          </div>
+          </div> */}
           <div>
             <label className="block mb-1 font-medium">Valid Until</label>
             <input
@@ -338,7 +338,7 @@ export default function MOUSubmissionForm() {
             component="span"
             color="success"
             fullWidth
-            sx={{ mb: 1 }}
+            sx={{ my: 1 }}
           >
             Upload the filled Justification Document
           </Button>
@@ -363,7 +363,7 @@ export default function MOUSubmissionForm() {
           disabled={loading}
           fullWidth
         >
-           "Submit"
+           Submit
         </Button>
       </form>
     </div>

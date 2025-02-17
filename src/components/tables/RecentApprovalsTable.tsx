@@ -1,5 +1,5 @@
 import { MOUSubmission } from "@/types";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
 interface RecentApprovalsTableProps {
@@ -37,6 +37,18 @@ export default function RecentApprovalsTable({
     );
     return daysLeft > 0 ? `${daysLeft} days left` : "Expired";
   }
+
+  useEffect(() => {
+    mous.forEach((mou) => {
+      const daysLeft = Math.ceil(
+        (new Date(mou.validUntil).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+      );
+
+      if (daysLeft === 90) {
+        handleNotify(mou.id);
+      }
+    });
+  }, [mous]);
 
   return (
     <div className="overflow-x-auto">

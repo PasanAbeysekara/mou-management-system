@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useEffect, useState } from "react";
 import NotificationsIcon from "@mui/icons-material/Notifications";
+import toast from 'react-hot-toast';
 import PersonIcon from "@mui/icons-material/Person";
 import SettingsIcon from "@mui/icons-material/Settings";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
@@ -24,16 +25,11 @@ export default function Header() {
   const { user, logout } = useAuth();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-
-  // State for real notifications
   const [notifications, setNotifications] = useState<Notification[]>([]);
-
   const router = useRouter();
 
   const isActive = (path: string) => {
-    if (path === "/") {
-      return pathname === path;
-    }
+    if (path === "/") return pathname === path;
     return pathname.startsWith(path);
   };
 
@@ -56,7 +52,21 @@ export default function Header() {
     }
   };
 
-  // Use total number of notifications (or filter for unread if desired)
+  // Clear notifications API call
+  const handleClearNotifications = async () => {
+    try {
+      const res = await fetch("/api/notifications/clear", { method: "POST" });
+      if (!res.ok) throw new Error("Failed to clear notifications");
+      setNotifications([]);
+      // Optionally, refetch notifications if needed:
+      // await fetchNotifications();
+      toast.success("Notifications cleared.");
+    } catch (error) {
+      console.error(error);
+      toast.error("Error clearing notifications");
+    }
+  };
+
   const notificationCount = notifications.length;
 
   return (
@@ -92,6 +102,7 @@ export default function Header() {
                   ? [
                       { name: "Admin Panel", path: "/admin-panel" },
                       { name: "Reporting", path: "/reporting" },
+                      { name: "Organizations Map", path:"/organizations-map"}
                     ]
                   : []),
               ].map((item) => (
@@ -150,13 +161,13 @@ export default function Header() {
                           ))
                         )}
                       </div>
-                      <div className="px-4 py-2 border-t text-center">
-                        <Link
-                          href="/notifications"
-                          className="text-sm text-red-700 hover:text-red-800"
+                      <div className="px-4 py-2 border-t flex justify-between items-center">
+                        <button
+                          onClick={handleClearNotifications}
+                          className="text-sm text-red-700 hover:underline"
                         >
-                          View all notifications
-                        </Link>
+                          Clear Notifications
+                        </button>
                       </div>
                     </div>
                   )}
@@ -238,16 +249,10 @@ export default function Header() {
               </>
             ) : (
               <div className="flex items-center space-x-4">
-                <Link
-                  href="/login"
-                  className="text-gray-700 hover:text-red-700"
-                >
+                <Link href="/login" className="text-gray-700 hover:text-red-700">
                   Sign in
                 </Link>
-                <Link
-                  href="/signup"
-                  className="bg-red-700 text-white px-4 py-2 rounded-md hover:bg-red-800"
-                >
+                <Link href="/signup" className="bg-red-700 text-white px-4 py-2 rounded-md hover:bg-red-800">
                   Sign up
                 </Link>
               </div>
@@ -277,10 +282,7 @@ function NotificationItem({
     <div className="px-4 py-3 hover:bg-gray-50 border-b last:border-b-0">
       <div className="text-sm font-semibold text-gray-900">{title}</div>
       <p className="text-sm text-gray-600">{message}</p>
-      <p className="text-xs text-gray-500 mt-1">
-        {new Date(createdAt).toLocaleString()}
-      </p>
-      {/* If the notification is related to an expiring MOU, show Renew button */}
+      <p className="text-xs text-gray-500 mt-1">{new Date(createdAt).toLocaleString()}</p>
       {mouId && (
         <button
           onClick={() => router.push(`/mou-submission/form?renewId=${mouId}`)}

@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     const emailTo = mou.submittedBy;
     const subject = "Your MOU Has Been Approved";
     const html = `
-      <p>Hello,</p>
+      <p>Dear ${session.user.name},</p>
       <p>Your MOU titled "<strong>${mou.title}</strong>" has been approved by our ${session.user.role}.</p>
       <p>Please log in to your dashboard for more details.</p>
       <p>Thank you!</p>

@@ -23,7 +23,6 @@ interface MOUSubmission {
   id: string;
   title: string;
   dateSubmitted: string;
-  // Add other fields as needed…
 }
 
 export default function OrganizationsMapPage() {
@@ -80,8 +79,9 @@ export default function OrganizationsMapPage() {
   }
 
   const containerStyle = { width: '100%', height: '500px' };
-  // Center map roughly on Sri Lanka.
-  const mapCenter = { lat: 7.8731, lng: 80.7718 };
+
+  // Default map center to show the whole world
+  const worldView = { lat: 0, lng: 0 };
 
   const handleMarkerClick = (org: Organization) => {
     setSelectedOrg(org);
@@ -99,7 +99,7 @@ export default function OrganizationsMapPage() {
   return (
     <div className="max-w-7xl mx-auto p-6">
       <h1 className="text-3xl font-bold mb-4">Organizations Map</h1>
-      <GoogleMap mapContainerStyle={containerStyle} center={mapCenter} zoom={7}>
+      <GoogleMap mapContainerStyle={containerStyle} center={worldView} zoom={2}>
         {organizations.map((org) => (
           <Marker
             key={org.id}
@@ -146,7 +146,6 @@ export default function OrganizationsMapPage() {
                   <th className="px-4 py-2">ID</th>
                   <th className="px-4 py-2">Title</th>
                   <th className="px-4 py-2">Submitted</th>
-                  {/* <th className="px-4 py-2">Actions</th> */}
                 </tr>
               </thead>
               <tbody>
@@ -157,15 +156,6 @@ export default function OrganizationsMapPage() {
                     <td className="px-4 py-2">
                       {new Date(mou.dateSubmitted).toLocaleDateString()}
                     </td>
-                    {/* <td className="px-4 py-2">
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        onClick={() => router.push(`/mou-submissions/${mou.id}`)}
-                      >
-                        View
-                      </Button>
-                    </td> */}
                   </tr>
                 ))}
               </tbody>

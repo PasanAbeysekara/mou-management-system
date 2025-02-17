@@ -35,23 +35,52 @@ export async function POST(request: Request) {
     });
 
     if (!mou) {
-      return NextResponse.json({ error: 'MOU not found' }, { status: 404 });
+      return NextResponse.json({ error: "MOU not found" }, { status: 404 });
     }
 
-    // Create a notification for the user who submitted this MOU.
-    // Customize the title and message as needed.
-    const notification = await prisma.notification.create({
+    // Check if a notification already exists for this MOU
+    const existingNotification = await prisma.notification.findFirst({
+      where: {
+        mouId: mou.id,
+        userId: mou.userId,
+      },
+    });
+
+    if (existingNotification) {
+      // If notification exists, update the "read" property to true
+      await prisma.notification.update({
+        where: { id: existingNotification.id },
+        data: { read: true, createdAt: new Date() }, // Reset timestamp if needed
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: "Notification updated as read.",
+      });
+    }
+
+    // If no existing notification, create a new one
+    const newNotification = await prisma.notification.create({
       data: {
         userId: mou.userId,
         mouId: mou.id,
         title: "MOU Expiring Soon",
-        message: `Your MOU titled "${mou.title}" is expiring on ${new Date(mou.validUntil).toLocaleDateString()}. Please consider renewing it.`,
+        message: `Your MOU titled "${mou.title}" is expiring on ${new Date(
+          mou.validUntil
+        ).toLocaleDateString()}. Please consider renewing it.`,
       },
     });
 
-    return NextResponse.json({ success: true, notification });
+    return NextResponse.json({
+      success: true,
+      notification: newNotification,
+    });
   } catch (error) {
     console.error("Notification POST error:", error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
+

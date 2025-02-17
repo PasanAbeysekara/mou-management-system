@@ -7,7 +7,7 @@ export default function SubmissionSuccess() {
         Thank you for submitting your MOU. Here's what to expect next:
       </h1>
       <div className="space-y-4 text-left mb-8">
-        <p>1. Review Process: Our team will review your submission within 5-7 business days.</p>
+        <p>1. Review Process: Our team will review your submission within 3 working days.</p>
         <p>2. Feedback: You will receive feedback via email once the review is complete.</p>
         <p>3. Contact Information: For inquiries, please contact support@university.edu.</p>
       </div>

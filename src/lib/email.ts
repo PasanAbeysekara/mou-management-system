@@ -20,5 +20,4 @@ export async function sendApprovalEmail(to: string, subject: string, html: strin
     html,
   });
   
-  console.log("Email sent: %s", info.messageId);
 }

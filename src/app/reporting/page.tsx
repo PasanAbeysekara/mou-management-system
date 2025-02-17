@@ -50,7 +50,6 @@ export default function ReportingPage() {
         throw new Error("Failed to fetch report data");
       }
       const data = await res.json();
-      console.log("API Response:", data); // Debug API response
       setMous(data);
     } catch (error) {
       console.error(error);

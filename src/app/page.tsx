@@ -99,7 +99,6 @@ export default function Home() {
     return Object.values(mou.status).every((step) => step.approved === true);
   });
 
-  console.log('domainApprovedMous:', domainApprovedMous);
   if (!user) {
     return <div>Please log in to view the dashboard.</div>;
   }

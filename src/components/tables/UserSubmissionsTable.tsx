@@ -49,7 +49,7 @@ export default function UserSubmissionsTable({ mous }: UserSubmissionsTableProps
                     active={Boolean(mou.status.legal.approved)}
                   />
                   <StatusIndicator
-                    label="Senate"
+                    label="Senate & Council"
                     approved={Boolean(mou.status.senate.approved)}
                     active={Boolean(mou.status.faculty.approved)}
                   />
