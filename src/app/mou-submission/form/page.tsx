@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import Autocomplete from "@mui/material/Autocomplete";
@@ -28,6 +28,14 @@ interface OrganizationOption {
 }
 
 export default function MOUSubmissionForm() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <MOUSubmissionFormContent />
+    </Suspense>
+  );
+}
+
+function MOUSubmissionFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const renewId = searchParams.get("renewId"); // For renewal
