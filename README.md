@@ -32,7 +32,7 @@ Ensure you have the following installed:
 
 ### Clone the Repository
 ```sh
-git clone https://github.com/pasanabeysekara/mou.git
+git clone https://github.com/SayonaSajini/mou.git
 cd mou
 ```
 
