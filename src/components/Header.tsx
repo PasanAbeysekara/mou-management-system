@@ -102,8 +102,10 @@ export default function Header() {
                   ? [
                       { name: "Admin Panel", path: "/admin-panel" },
                       { name: "Reporting", path: "/reporting" },
-                      { name: "Organizations Map", path:"/organizations-map"}
                     ]
+                  : []),
+                ...(user.role === "SUPER_ADMIN"
+                  ? [{ name: "Organizations Map", path:"/organizations-map"}]
                   : []),
               ].map((item) => (
                 <Link

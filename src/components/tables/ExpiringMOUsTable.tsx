@@ -29,7 +29,14 @@ export default function ExpiringMOUsTable({ mous }: ExpiringMOUsTableProps) {
         <tbody className="divide-y divide-gray-200">
           {mous.map((mou) => (
             <tr key={mou.id}>
-              <td className="px-6 py-4">{mou.title}</td>
+              <td className="px-6 py-4">
+                <a
+                  href={`${mou.documents.justification}`}
+                  className="text-blue-600 hover:text-blue-800 underline"
+                >
+                  {mou.title}
+                </a>
+              </td>
               <td className="px-6 py-4">
                 {new Date(mou.validUntil).toLocaleDateString()}
               </td>

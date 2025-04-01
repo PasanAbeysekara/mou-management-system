@@ -57,7 +57,14 @@ export default function PendingApprovalsTable({ mous, userRole }: PendingApprova
         <tbody className="divide-y divide-gray-200">
           {getPendingMOUs().map((mou) => (
             <tr key={mou.id}>
-              <td className="px-6 py-4 whitespace-nowrap">{mou.title}</td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <a
+                  href={`${mou.documents.justification}`}
+                  className="text-blue-600 hover:text-blue-800 underline"
+                >
+                  {mou.title}
+                </a>
+              </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 {mou.submittedBy}
               </td>
