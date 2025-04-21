@@ -60,7 +60,7 @@ function MOUSubmissionFormContent() {
   const [loading, setLoading] = useState(true);
 
   const handleTemplateDownload = () => {
-    window.open("/template.pdf", "_blank");
+    window.open("/Justification-format.docx", "_blank");
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

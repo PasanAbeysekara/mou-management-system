@@ -69,7 +69,11 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user,trigger, session }) {
+      if (trigger === "update" && session?.user) {
+        token.name = session.user.name;
+        token.avatar = session.user.avatar;
+      }
       // When user logs in for the first time, transfer user fields to token
       if (user) {
         token.id = user.id;
