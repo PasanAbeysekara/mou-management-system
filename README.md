@@ -17,7 +17,7 @@ The MOU (Memorandum of Understanding) Management System is a web-based applicati
 - **Frontend**: Next.js (React), TypeScript, Tailwind CSS, MUI
 - **Backend**: Next.js API Routes, Prisma ORM, MySQL Database
 - **Authentication**: NextAuth.js with credential-based login
-- **Database**: MySql, Hosted in Aiven.io
+- **Database**: MySQL, Hosted in Aiven.io
 - **Storage**: Firebase Storage (for document uploads)
 - **Email Service**: Nodemailer (for approval notifications)
 - **Google Maps API**: Location selection for organizations
